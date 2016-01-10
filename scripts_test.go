@@ -5,10 +5,11 @@
 package jobs
 
 import (
-	"github.com/garyburd/redigo/redis"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 func TestPopNextJobsScript(t *testing.T) {
@@ -81,21 +82,24 @@ func TestRetryOrFailJobScript(t *testing.T) {
 
 	// We'll use table-driven tests here
 	testCases := []struct {
-		job             *Job
-		expectedReturn  bool
-		expectedRetries int
+		job                    *Job
+		expectedReturn         bool
+		expectedRetries        int
+		expectedFailedAttempts int
 	}{
 		{
 			// One job will start with 2 retries remaining
-			job:             &Job{typ: testJob, id: "retriesRemainingJob", retries: 2, status: StatusExecuting},
-			expectedReturn:  true,
-			expectedRetries: 1,
+			job:                    &Job{typ: testJob, id: "retriesRemainingJob", retries: 2, status: StatusExecuting},
+			expectedReturn:         true,
+			expectedRetries:        1,
+			expectedFailedAttempts: 1,
 		},
 		{
 			// One job will start with 0 retries remaining
-			job:             &Job{typ: testJob, id: "noRetriesJob", retries: 0, status: StatusExecuting},
-			expectedReturn:  false,
-			expectedRetries: 0,
+			job:                    &Job{typ: testJob, id: "noRetriesJob", retries: 0, status: StatusExecuting},
+			expectedReturn:         false,
+			expectedRetries:        0,
+			expectedFailedAttempts: 0,
 		},
 	}
 
@@ -103,6 +107,7 @@ func TestRetryOrFailJobScript(t *testing.T) {
 	tx := newTransaction()
 	gotReturns := make([]bool, len(testCases))
 	gotRetries := make([]int, len(testCases))
+	gotFailedAttempts := make([]int, len(testCases))
 	for i, tc := range testCases {
 		// Save the job
 		tx.saveJob(tc.job)
@@ -110,6 +115,7 @@ func TestRetryOrFailJobScript(t *testing.T) {
 		tx.retryOrFailJob(tc.job, newScanBoolHandler(&(gotReturns[i])))
 		// Get the new number of retries from the database and save the value in a slice
 		tx.command("HGET", redis.Args{tc.job.Key(), "retries"}, newScanIntHandler(&(gotRetries[i])))
+		tx.command("HGET", redis.Args{tc.job.Key(), "failedAttempts"}, newScanIntHandler(&(gotFailedAttempts[i])))
 	}
 	// Execute the transaction
 	if err := tx.exec(); err != nil {
@@ -120,6 +126,9 @@ func TestRetryOrFailJobScript(t *testing.T) {
 	for i, tc := range testCases {
 		if gotRetries[i] != tc.expectedRetries {
 			t.Errorf("Number of retries after executing script was incorrect for test case %d (job:%s). Expected %v but got %v", i, tc.job.id, tc.expectedRetries, gotRetries[i])
+		}
+		if gotFailedAttempts[i] != tc.expectedFailedAttempts {
+			t.Errorf("Number of failed attempts after executing script was incorrect for test case %d (job:%s). Expected %v but got %v", i, tc.job.id, tc.expectedFailedAttempts, gotFailedAttempts[i])
 		}
 		if gotReturns[i] != tc.expectedReturn {
 			t.Errorf("Return value from script was incorrect for test case %d (job:%s). Expected %v but got %v", i, tc.job.id, tc.expectedReturn, gotReturns[i])

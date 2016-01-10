@@ -6,8 +6,9 @@ package jobs
 
 import (
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 // transaction is an abstraction layer around a redis transaction.
@@ -221,7 +222,7 @@ func newScanIntHandler(i *int) replyHandler {
 		}
 		var err error
 		(*i), err = redis.Int(reply, nil)
-		if err != nil {
+		if err != nil && err != redis.ErrNil {
 			return fmt.Errorf("jobs: Error in newScanIntHandler: %s", err.Error())
 		}
 		return nil
