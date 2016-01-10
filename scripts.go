@@ -302,6 +302,10 @@ if ((oldStatus ~= '') and (oldStatus ~= newStatus)) then
 	local oldStatusSet = 'jobs:' .. oldStatus
 	redis.call('ZREM', oldStatusSet, jobId)
 end
+
+-- Increment and find out what attempt we are on
+local attempt = redis.call('HINCRBY', jobKey, 'attempt', 1)
+
 -- Set the job status in the hash
 redis.call('HSET', jobKey, 'status', newStatus)
 if retries == '0' then
@@ -312,6 +316,8 @@ if retries == '0' then
 else
 	-- Return true to indicate the job has been queued for retry
 	-- NOTE: 1 is used to represent true (for consistency)
+	-- Move the next execution time up exponentially based on our attempts.
+	redis.call('HINCRBY', jobKey, 'time', (2^attempt)*120000000000)
 	return 1
 end`)
 	setJobFieldScript = redis.NewScript(0, `-- Copyright 2015 Alex Browne.  All rights reserved.

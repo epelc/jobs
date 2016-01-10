@@ -4,8 +4,6 @@
 
 package jobs
 
-import ()
-
 // configType holds different config variables
 type configType struct {
 	Db databaseConfig

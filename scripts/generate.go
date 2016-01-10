@@ -12,13 +12,15 @@ package main
 
 import (
 	"bytes"
-	"github.com/albrow/jobs"
 	"go/build"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/albrow/jobs"
 )
 
 var (
@@ -80,6 +82,7 @@ func init() {
 }
 
 func main() {
+	log.Println("Converting lua templates to scripts.go")
 	scripts, err := findScripts(scriptsPath)
 	if err != nil {
 		panic(err)
@@ -87,6 +90,7 @@ func main() {
 	if err := generateFile(scripts, genTmplPath, destPath); err != nil {
 		panic(err)
 	}
+	log.Println("Finished generating scripts.go")
 }
 
 // findScripts finds all the .lua script files in the given path
