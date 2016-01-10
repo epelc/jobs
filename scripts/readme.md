@@ -1,3 +1,2 @@
-This folder contains our lua scripts. All of our lua scripts are used by the `scripts.go.tmpl` to generate a `scripts.go` file which our golang code uses. To update your scripts and generate the `scripts.go` file run the following command.
-
-`go run generate.go`
+### Lua Scripts
+These scripts are concated into a `scripts.go` file using go generate. If you edit any lua scripts you must run `go generate .` to regenerate the `scripts.go` file. Otherwise your updated scripts will not be used.
